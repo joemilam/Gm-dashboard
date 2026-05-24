@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GM Campaign Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #1a1610;
+    --surface: #221e15;
+    --surface2: #2a2419;
+    --border: #3d3420;
+    --border-light: #4e4328;
+    --accent: #c9a84c;
+    --accent-dim: rgba(201,168,76,0.12);
+    --accent2: #a0522d;
+    --accent3: #6b8f5e;
+    --text: #e8dfc8;
+    --muted: #7a6e55;
+    --heading: 'Cinzel', serif;
+    --body: 'Crimson Pro', serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle parchment texture via noise */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 2rem 2.5rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0;
+    width: 35%;
+    height: 1px;
+    background: linear-gradient(to right, var(--accent), transparent);
+  }
+
+  .header-label {
+    font-family: var(--heading);
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    font-family: var(--heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+
+  .header-right {
+    text-align: right;
+    font-family: var(--body);
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+
+  .header-right span { color: var(--accent); }
+
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+    justify-content: flex-end;
+  }
+
+  .hdr-btn {
+    font-family: var(--heading);
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border-light);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── GRID ── */
+  .main {
+    padding: 2rem 2.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    animation: rise 0.35s ease both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .panel:nth-child(1) { animation-delay: 0.04s; }
+  .panel:nth-child(2) { animation-delay: 0.08s; }
+  .panel:nth-child(3) { animation-delay: 0.12s; }
+  .panel:nth-child(4) { animation-delay: 0.16s; }
+  .panel:nth-child(5) { animation-delay: 0.20s; }
+  .panel:nth-child(6) { animation-delay: 0.24s; }
+
+  .panel-wide  { grid-column: span 2; }
+  .panel-full  { grid-column: 1 / -1; }
+
+  .panel-header {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .panel-icon { font-size: 0.85rem; }
+
+  .panel-title {
+    font-family: var(--heading);
+    font-size: 0.55rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-count {
+    margin-left: auto;
+    font-family: var(--heading);
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 0.15rem 0.5rem;
+  }
+
+  .panel-body { padding: 0.75rem 1rem; }
+
+  /* ── STATS BAR ── */
+  .stats-panel {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .stat-block {
+    padding: 1rem 1.25rem;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .stat-block:last-child { border-right: none; }
+
+  .stat-label {
+    font-family: var(--heading);
+    font-size: 0.5rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .stat-value {
+    font-family: var(--heading);
+    font-size: 1.75rem;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-sub {
+    font-family: var(--body);
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  /* ── NPC LIST ── */
+  .npc-list { list-style: none; }
+
+  .npc-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.5rem 1rem;
+    margin: 0 -1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .npc-item:last-child { border-bottom: none; }
+  .npc-item:hover { background: rgba(201,168,76,0.05); }
+
+  .npc-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-alive    { background: var(--accent3); box-shadow: 0 0 5px var(--accent3); }
+  .status-dead     { background: var(--accent2); box-shadow: 0 0 5px var(--accent2); }
+  .status-unknown  { background: var(--muted); }
+
+  .npc-name  { font-size: 0.95rem; font-weight: 600; color: var(--text); flex: 1; }
+  .npc-role  { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+  .npc-tag   {
+    font-family: var(--heading);
+    font-size: 0.5rem;
+    letter-spacing: 0.08em;
+    padding: 0.1rem 0.45rem;
+    background: rgba(255,255,255,0.05);
+    color: var(--muted);
+  }
+
+  /* ── THREAD LIST ── */
+  .thread-list { list-style: none; }
+
+  .thread-item {
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .thread-item:last-child { border-bottom: none; }
+
+  .thread-top {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .thread-name { font-size: 0.95rem; font-weight: 600; color: var(--text); flex: 1; }
+
+  .thread-badge {
+    font-family: var(--heading);
+    font-size: 0.48rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.12rem 0.45rem;
+  }
+  .ts-seeded    { background: rgba(255,255,255,0.05); color: var(--muted); }
+  .ts-active    { background: rgba(201,168,76,0.12); color: var(--accent); }
+  .ts-resolving { background: rgba(160,82,45,0.15); color: var(--accent2); }
+  .ts-resolved  { background: rgba(107,143,94,0.12); color: var(--accent3); }
+
+  .thread-note { font-size: 0.82rem; color: var(--muted); font-style: italic; }
+
+  /* ── SESSION LOG ── */
+  .session-list { list-style: none; }
+
+  .session-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    align-items: flex-start;
+  }
+  .session-item:last-child { border-bottom: none; }
+
+  .session-num {
+    font-family: var(--heading);
+    font-size: 0.6rem;
+    color: var(--accent);
+    flex-shrink: 0;
+    padding-top: 0.2rem;
+    letter-spacing: 0.05em;
+  }
+
+  .session-title { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 0.1rem; }
+  .session-date  { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+  /* ── LOCATIONS ── */
+  .location-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .location-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .location-card:hover { border-color: var(--accent); }
+
+  .location-name   { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.15rem; }
+  .location-detail { font-size: 0.75rem; color: var(--muted); font-style: italic; }
+
+  /* ── INBOX ── */
+  .inbox-list { list-style: none; }
+
+  .inbox-item {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .inbox-item:last-child { border-bottom: none; }
+  .inbox-item:hover { opacity: 0.7; }
+
+  .inbox-bullet { color: var(--accent); font-size: 0.75rem; flex-shrink: 0; padding-top: 0.1rem; }
+  .inbox-text   { font-size: 0.9rem; color: var(--text); }
+
+  /* ── ADD BUTTON ── */
+  .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    font-family: var(--heading);
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    background: none;
+    border: 1px dashed var(--border-light);
+    padding: 0.45rem 0.75rem;
+    width: 100%;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-top: 2px solid var(--accent);
+    width: 490px;
+    max-width: 95vw;
+    padding: 1.5rem;
+    animation: rise 0.2s ease;
+  }
+
+  .modal h3 {
+    font-family: var(--heading);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.1rem;
+  }
+
+  .modal-field { margin-bottom: 0.8rem; }
+
+  .modal-field label {
+    display: block;
+    font-family: var(--heading);
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .modal-field input,
+  .modal-field select,
+  .modal-field textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 0.95rem;
+    padding: 0.5rem 0.75rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .modal-field input:focus,
+  .modal-field select:focus,
+  .modal-field textarea:focus { border-color: var(--accent); }
+  .modal-field textarea { resize: vertical; min-height: 70px; }
+  .modal-field select option { background: var(--surface2); }
+
+  .modal-row { display: flex; gap: 0.75rem; }
+  .modal-row .modal-field { flex: 1; }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+  }
+
+  .btn {
+    font-family: var(--heading);
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.55rem 1.1rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .btn-primary  { background: var(--accent); color: #1a1610; }
+  .btn-primary:hover { background: #dbb85a; }
+  .btn-cancel   { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-cancel:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ── EDITABLE FIELDS ── */
+  .editable {
+    outline: none;
+    border-bottom: 1px dashed transparent;
+    transition: border-color 0.15s;
+    cursor: text;
+  }
+  .editable:focus { border-bottom-color: var(--accent); }
+
+  /* ── ORNAMENT ── */
+  .ornament {
+    text-align: center;
+    color: var(--border-light);
+    font-size: 1rem;
+    margin: 0.25rem 0;
+    letter-spacing: 0.5em;
+    user-select: none;
+  }
+
+  /* empty state */
+  .empty { font-size: 0.85rem; color: var(--muted); font-style: italic; padding: 0.4rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-label">Campaign Dashboard &nbsp;·&nbsp; GM Record</div>
+    <h1 contenteditable="true" class="editable" id="campaign-name">Campaign Name</h1>
+  </div>
+  <div class="header-right">
+    <div>System: <span contenteditable="true" class="editable" id="game-system">System / Edition</span></div>
+    <div>In-game date: <span contenteditable="true" class="editable" id="ingame-date">—</span></div>
+    <div id="real-date"></div>
+    <div class="header-actions">
+      <button class="hdr-btn" onclick="exportData()">Export</button>
+      <button class="hdr-btn" onclick="document.getElementById('import-file').click()">Import</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)" />
+    </div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- STATS -->
+  <div class="stats-panel panel">
+    <div class="stat-block">
+      <div class="stat-label">Sessions</div>
+      <div class="stat-value" id="stat-sessions">0</div>
+      <div class="stat-sub">logged</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">NPCs</div>
+      <div class="stat-value" id="stat-npcs">0</div>
+      <div class="stat-sub">active</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Threads</div>
+      <div class="stat-value" id="stat-threads">0</div>
+      <div class="stat-sub">open</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Locations</div>
+      <div class="stat-value" id="stat-locations">0</div>
+      <div class="stat-sub">mapped</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Factions</div>
+      <div class="stat-value" id="stat-factions">0</div>
+      <div class="stat-sub">in play</div>
+    </div>
+  </div>
+
+  <!-- NPCs -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-icon">⚔️</span>
+      <span class="panel-title">NPC Roster</span>
+      <span class="panel-count" id="npc-count">0 active</span>
+    </div>
+    <div class="panel-body">
+      <ul class="npc-list" id="npc-list"></ul>
+      <button class="add-btn" onclick="openModal('npc')">+ Add NPC</button>
+    </div>
+  </div>
+
+  <!-- THREADS -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-icon">🪢</span>
+      <span class="panel-title">Plot Threads</span>
+      <span class="panel-count" id="thread-count">0 open</span>
+    </div>
+    <div class="panel-body">
+      <ul class="thread-list" id="thread-list"></ul>
+      <button class="add-btn" onclick="openModal('thread')">+ Add Thread</button>
+    </div>
+  </div>
+
+  <!-- SESSIONS -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-icon">📜</span>
+      <span class="panel-title">Session Log</span>
+      <span class="panel-count" id="session-count">0 sessions</span>
+    </div>
+    <div class="panel-body">
+      <ul class="session-list" id="session-list"></ul>
+      <button class="add-btn" onclick="openModal('session')">+ Log Session</button>
+    </div>
+  </div>
+
+  <!-- LOCATIONS -->
+  <div class="panel panel-wide">
+    <div class="panel-header">
+      <span class="panel-icon">🗺️</span>
+      <span class="panel-title">Locations</span>
+      <span class="panel-count" id="location-count">0 mapped</span>
+    </div>
+    <div class="panel-body">
+      <div class="location-grid" id="location-grid"></div>
+      <button class="add-btn" style="margin-top:0.75rem" onclick="openModal('location')">+ Add Location</button>
+    </div>
+  </div>
+
+  <!-- INBOX -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-icon">🪶</span>
+      <span class="panel-title">Scratch &amp; Ideas</span>
+      <span class="panel-count" id="inbox-count">0 items</span>
+    </div>
+    <div class="panel-body">
+      <ul class="inbox-list" id="inbox-list"></ul>
+      <button class="add-btn" onclick="openModal('inbox')">+ Capture Idea</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal-box">
+    <h3 id="modal-title">Add Entry</h3>
+    <div id="modal-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModalDirect()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────
+const STORE_KEY = 'gm-dashboard-v2';
+
+function defaultState() {
+  return { meta: { campaign: 'Campaign Name', system: 'System / Edition', ingame: '—' },
+           npcs: [], threads: [], sessions: [], locations: [], inbox: [], factions: [] };
+}
+
+let state = (() => {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || defaultState(); }
+  catch { return defaultState(); }
+})();
+
+function save() {
+  // persist editable header fields
+  state.meta.campaign = document.getElementById('campaign-name').textContent.trim();
+  state.meta.system   = document.getElementById('game-system').textContent.trim();
+  state.meta.ingame   = document.getElementById('ingame-date').textContent.trim();
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  render();
+}
+
+// persist header on blur
+['campaign-name','game-system','ingame-date'].forEach(id => {
+  document.getElementById(id).addEventListener('blur', save);
+});
+
+// ── DATE ───────────────────────────────────────────────
+document.getElementById('real-date').textContent =
+  new Date().toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'long', day:'numeric' });
+
+// restore header
+document.getElementById('campaign-name').textContent = state.meta.campaign || 'Campaign Name';
+document.getElementById('game-system').textContent   = state.meta.system   || 'System / Edition';
+document.getElementById('ingame-date').textContent   = state.meta.ingame   || '—';
+
+// ── RENDER ─────────────────────────────────────────────
+function render() {
+  renderNPCs(); renderThreads(); renderSessions();
+  renderLocations(); renderInbox(); renderStats();
+}
+
+const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const empty = msg => `<li class="empty">${msg}</li>`;
+const emptyDiv = msg => `<div class="empty">${msg}</div>`;
+
+function renderNPCs() {
+  const alive = state.npcs.filter(n => n.status === 'alive').length;
+  document.getElementById('npc-count').textContent = alive + ' active';
+  document.getElementById('stat-npcs').textContent = alive;
+  document.getElementById('npc-list').innerHTML = state.npcs.length
+    ? state.npcs.map((n,i) => `
+        <li class="npc-item" onclick="removePrompt('npcs',${i},'${esc(n.name)}')">
+          <span class="npc-dot status-${esc(n.status)}"></span>
+          <span class="npc-name">${esc(n.name)}</span>
+          <span class="npc-role">${esc(n.role)}</span>
+          <span class="npc-tag">${esc(n.faction)}</span>
+        </li>`).join('')
+    : empty('No NPCs yet — add one below.');
+}
+
+function renderThreads() {
+  const open = state.threads.filter(t => t.status !== 'resolved').length;
+  document.getElementById('thread-count').textContent = open + ' open';
+  document.getElementById('stat-threads').textContent = open;
+  document.getElementById('thread-list').innerHTML = state.threads.length
+    ? state.threads.map((t,i) => `
+        <li class="thread-item" onclick="removePrompt('threads',${i},'${esc(t.name)}')">
+          <div class="thread-top">
+            <span class="thread-name">${esc(t.name)}</span>
+            <span class="thread-badge ts-${esc(t.status)}">${esc(t.status)}</span>
+          </div>
+          <div class="thread-note">${esc(t.note)}</div>
+        </li>`).join('')
+    : empty('No threads yet — add one below.');
+}
+
+function renderSessions() {
+  document.getElementById('session-count').textContent = state.sessions.length + ' sessions';
+  document.getElementById('stat-sessions').textContent = state.sessions.length;
+  const recent = [...state.sessions].reverse().slice(0, 6);
+  document.getElementById('session-list').innerHTML = recent.length
+    ? recent.map((s,i) => `
+        <li class="session-item" onclick="removePrompt('sessions',${state.sessions.length-1-i},'Session ${esc(s.num)}')">
+          <span class="session-num">#${esc(s.num)}</span>
+          <div>
+            <div class="session-title">${esc(s.title)}</div>
+            <div class="session-date">${esc(s.date)}</div>
+          </div>
+        </li>`).join('')
+    : empty('No sessions logged yet.');
+}
+
+function renderLocations() {
+  document.getElementById('location-count').textContent = state.locations.length + ' mapped';
+  document.getElementById('stat-locations').textContent = state.locations.length;
+  document.getElementById('location-grid').innerHTML = state.locations.length
+    ? state.locations.map((l,i) => `
+        <div class="location-card" onclick="removePrompt('locations',${i},'${esc(l.name)}')">
+          <div class="location-name">${esc(l.name)}</div>
+          <div class="location-detail">${esc(l.region)} · ${esc(l.control) || 'unclaimed'}</div>
+        </div>`).join('')
+    : emptyDiv('No locations mapped yet.');
+}
+
+function renderInbox() {
+  document.getElementById('inbox-count').textContent = state.inbox.length + ' items';
+  document.getElementById('inbox-list').innerHTML = state.inbox.length
+    ? state.inbox.map((item,i) => `
+        <li class="inbox-item" onclick="removeInbox(${i})">
+          <span class="inbox-bullet">✦</span>
+          <span class="inbox-text">${esc(item)}</span>
+        </li>`).join('')
+    : empty('Nothing captured yet.');
+}
+
+function renderStats() {
+  document.getElementById('stat-factions').textContent =
+    [...new Set(state.npcs.map(n => n.faction).filter(Boolean))].length;
+}
+
+// ── REMOVE HELPERS ─────────────────────────────────────
+function removePrompt(collection, idx, label) {
+  if (confirm(`Remove "${label}"?`)) {
+    state[collection].splice(idx, 1);
+    save();
+  }
+}
+
+function removeInbox(i) {
+  if (confirm('Mark as processed and remove?')) {
+    state.inbox.splice(i, 1);
+    save();
+  }
+}
+
+// ── MODALS ─────────────────────────────────────────────
+let currentSave = null;
+
+const modals = {
+  npc: {
+    title: 'Add NPC',
+    html: `
+      <div class="modal-field"><label>Name</label><input id="f-name" placeholder="Full name" /></div>
+      <div class="modal-row">
+        <div class="modal-field"><label>Role / Title</label><input id="f-role" placeholder="e.g. Town Guard, Merchant" /></div>
+        <div class="modal-field"><label>Faction / Group</label><input id="f-faction" placeholder="e.g. The Crown, Guild" /></div>
+      </div>
+      <div class="modal-row">
+        <div class="modal-field"><label>Location</label><input id="f-location" placeholder="Where are they?" /></div>
+        <div class="modal-field"><label>Status</label>
+          <select id="f-status">
+            <option value="alive">Alive</option>
+            <option value="dead">Dead</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-field"><label>Secret / GM Note</label><textarea id="f-note" placeholder="What do they want? What are they hiding?"></textarea></div>`,
+    save() {
+      const name = document.getElementById('f-name').value.trim();
+      if (!name) return;
+      state.npcs.push({ name, role: document.getElementById('f-role').value,
+        faction: document.getElementById('f-faction').value,
+        location: document.getElementById('f-location').value,
+        status: document.getElementById('f-status').value,
+        note: document.getElementById('f-note').value });
+      save(); closeModalDirect();
+    }
+  },
+  thread: {
+    title: 'Add Plot Thread',
+    html: `
+      <div class="modal-field"><label>Thread Name</label><input id="f-name" placeholder="e.g. The missing heir" /></div>
+      <div class="modal-field"><label>Status</label>
+        <select id="f-status">
+          <option value="seeded">Seeded</option>
+          <option value="active">Active</option>
+          <option value="resolving">Resolving</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </div>
+      <div class="modal-field"><label>Notes / Payoff</label><textarea id="f-note" placeholder="What's at stake? How does this resolve?"></textarea></div>`,
+    save() {
+      const name = document.getElementById('f-name').value.trim();
+      if (!name) return;
+      state.threads.push({ name, status: document.getElementById('f-status').value,
+        note: document.getElementById('f-note').value });
+      save(); closeModalDirect();
+    }
+  },
+  session: {
+    title: 'Log Session',
+    html: `
+      <div class="modal-row">
+        <div class="modal-field"><label>Session #</label><input id="f-num" type="number" placeholder="${state.sessions.length + 1}" /></div>
+        <div class="modal-field"><label>Date Played</label><input id="f-date" type="date" /></div>
+      </div>
+      <div class="modal-field"><label>Title / Summary</label><input id="f-name" placeholder="e.g. Into the Underdark" /></div>
+      <div class="modal-field"><label>Loose Threads / Notes</label><textarea id="f-note" placeholder="What did you leave dangling?"></textarea></div>`,
+    save() {
+      const title = document.getElementById('f-name').value.trim();
+      if (!title) return;
+      state.sessions.push({ title,
+        num: document.getElementById('f-num').value || state.sessions.length + 1,
+        date: document.getElementById('f-date').value,
+        note: document.getElementById('f-note').value });
+      save(); closeModalDirect();
+    }
+  },
+  location: {
+    title: 'Add Location',
+    html: `
+      <div class="modal-field"><label>Name</label><input id="f-name" placeholder="e.g. Ironhaven, The Shattered Keep" /></div>
+      <div class="modal-row">
+        <div class="modal-field"><label>Region / Area</label><input id="f-region" placeholder="e.g. Northern Reaches" /></div>
+        <div class="modal-field"><label>Controlled By</label><input id="f-control" placeholder="e.g. Crown, Unclaimed" /></div>
+      </div>
+      <div class="modal-field"><label>Notes / Secrets</label><textarea id="f-note" placeholder="What's notable or hidden here?"></textarea></div>`,
+    save() {
+      const name = document.getElementById('f-name').value.trim();
+      if (!name) return;
+      state.locations.push({ name, region: document.getElementById('f-region').value,
+        control: document.getElementById('f-control').value,
+        note: document.getElementById('f-note').value });
+      save(); closeModalDirect();
+    }
+  },
+  inbox: {
+    title: 'Capture Idea',
+    html: `
+      <div class="modal-field"><label>Raw Idea or Note</label>
+        <textarea id="f-note" placeholder="Whatever just struck you. Don't overthink it." style="min-height:100px"></textarea>
+      </div>`,
+    save() {
+      const note = document.getElementById('f-note').value.trim();
+      if (!note) return;
+      state.inbox.push(note);
+      save(); closeModalDirect();
+    }
+  }
+};
+
+function openModal(type) {
+  const m = modals[type];
+  document.getElementById('modal-title').textContent = m.title;
+  document.getElementById('modal-content').innerHTML = m.html;
+  document.getElementById('modal-save').onclick = () => m.save();
+  document.getElementById('modal-overlay').classList.add('open');
+  const first = document.querySelector('#modal-content input, #modal-content textarea');
+  if (first) setTimeout(() => first.focus(), 50);
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
+
+// ── EXPORT / IMPORT ────────────────────────────────────
+function exportData() {
+  state.meta.campaign = document.getElementById('campaign-name').textContent.trim();
+  state.meta.system   = document.getElementById('game-system').textContent.trim();
+  state.meta.ingame   = document.getElementById('ingame-date').textContent.trim();
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.meta.campaign || 'campaign').replace(/\s+/g,'-').toLowerCase() + '-dashboard.json';
+  a.click();
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (confirm(`Import campaign "${imported.meta?.campaign || 'Unknown'}"? This will replace your current data.`)) {
+        state = imported;
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+        document.getElementById('campaign-name').textContent = state.meta?.campaign || 'Campaign Name';
+        document.getElementById('game-system').textContent   = state.meta?.system   || 'System / Edition';
+        document.getElementById('ingame-date').textContent   = state.meta?.ingame   || '—';
+        render();
+      }
+    } catch { alert('Could not read that file. Make sure it\'s a valid dashboard export.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ── INIT ───────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
